@@ -5,7 +5,7 @@ import hashlib
 from werkzeug.utils import secure_filename
 from config import Config
 import xml.etree.ElementTree as ET
-import pickle
+import json
 try:
     import yaml
 except ImportError:
@@ -73,10 +73,16 @@ def process_xml_file(file_path):
         return {'error': str(e)}
 
 def process_pickle_file(file_path):
-    """Process pickle file"""
+    """Process data file using safe JSON deserialization.
+
+    Pickle deserialization of untrusted data is unsafe (CWE-502) because a
+    crafted payload can execute arbitrary code during unpickling.  This
+    function therefore reads the file as JSON, which carries no execution
+    semantics and is safe to deserialize from untrusted sources.
+    """
     try:
-        with open(file_path, 'rb') as f:
-            data = pickle.load(f)
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
         return data
     except Exception as e:
         return {'error': str(e)}
