@@ -133,17 +133,24 @@ def delete_project(project_id):
 def get_project_dashboard(project_id):
     """Get project dashboard"""
     user = get_current_user()
-    
+
     project = Project.query.get(project_id)
-    
+
     if not project:
         return jsonify({'error': 'Project not found'}), 404
-    
+
+    # Authorization check: only the project owner, admins, or members of a
+    # public project may access the dashboard.  Without this check any
+    # authenticated user could enumerate dashboards by cycling through
+    # project_id values (CWE-639).
+    if project.owner_id != user.id and user.role != 'admin' and not project.is_public:
+        return jsonify({'error': 'Access denied'}), 403
+
     from models import Task, Document
-    
+
     tasks = Task.query.filter_by(project_id=project_id).all()
     documents = Document.query.filter_by(project_id=project_id).all()
-    
+
     return jsonify({
         'project': project.to_dict(),
         'tasks': [t.to_dict() for t in tasks],
